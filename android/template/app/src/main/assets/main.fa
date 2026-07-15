@@ -1,0 +1,49 @@
+// ─────────────────────────────────────────────────
+//  Login App - Forja en Android
+//
+//  Editá este archivo, ejecutá build-apk.ps1
+//  y obtené un APK instalable.
+// ─────────────────────────────────────────────────
+
+funcion buscar_usuario(usr, pass) -> Resultado {
+    si (usr == "admin" && pass == "1234") { retornar Ok("Bienvenido Admin") }
+    si (usr == "user" && pass == "pass") { retornar Ok("Bienvenido User") }
+    si (usr == "forja" && pass == "lang") { retornar Ok("Bienvenido a Forja!") }
+    retornar Error("Usuario o contraseña incorrectos")
+}
+
+funcion main() {
+    escribir("==================================")
+    escribir("       🔐 INICIAR SESIÓN")
+    escribir("==================================")
+    escribir("")
+    escribir("Usuarios de prueba:")
+    escribir("  admin / 1234")
+    escribir("  user  / pass")
+    escribir("  forja / lang")
+    escribir("")
+    escribir("Ingresá tus datos:")
+    escribir("")
+
+    variable usuario = leer("👤 Usuario: ")
+    variable contrasena = leer("🔒 Contraseña: ")
+
+    escribir("")
+    escribir("Validando...")
+    escribir("")
+
+    variable resultado = buscar_usuario(usuario, contrasena)
+    coincidir (resultado) {
+        caso Ok(valor) -> {
+            escribir("✅ " + valor)
+        }
+        caso Error(err) -> {
+            escribir("❌ " + err)
+        }
+    }
+
+    escribir("")
+    escribir("==================================")
+}
+
+main()
