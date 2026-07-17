@@ -13,8 +13,15 @@ name = "forja_android_rt"
 [dependencies]
 forja = { path = "../.." }
 jni = { version = "0.21", default-features = false }
+forja-gui-rt = { path = "../forja-gui-rt" }
+log = "0.4"
+android_logger = "0.13"
 
 # NOTA: Usamos unwind en vez de abort porque necesitamos catch_unwind
 # para evitar que panics de Rust maten la app Android.
 # El overhead es ~200KB, aceptable para un .so.
 # Los profiles se heredan del workspace.
+
+[target.'cfg(target_os = "android")'.dependencies.winit]
+version = "0.30.13"
+features = ["android-native-activity"]

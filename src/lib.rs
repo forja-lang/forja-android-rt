@@ -396,7 +396,7 @@ pub extern "C" fn Java_com_forja_Runtime_nativeSetInputCallback<'local>(
 }
 
 // ─── JNI OnLoad / OnUnload ──────────────────────────────────────
-
+ 
 #[no_mangle]
 pub extern "C" fn JNI_OnLoad(
     vm: jni::JavaVM,
@@ -416,19 +416,80 @@ pub extern "C" fn JNI_OnUnload(
     }
 }
 
-// ─── Tests ──────────────────────────────────────────────────────
+// ─── Native Activity Entry Point ─────────────────────────────────
 
+#[cfg(target_os = "android")]
+#[no_mangle]
+fn android_main(app: forja_gui_rt::winit::platform::android::activity::AndroidApp) {
+    // Inicializar logger para redirigir `println!` y `log` a Logcat
+    android_logger::init_once(
+        android_logger::Config::default()
+            .with_max_level(log::LevelFilter::Debug)
+            .with_tag("ForjaRuntime")
+    );
+
+    log::info!("Iniciando Forja Android Native Activity...");
+
+    let asset_manager = app.asset_manager();
+    let mut asset = match asset_manager.open(std::ffi::CStr::from_bytes_with_nul(b"main.fa\0").unwrap()) {
+        Some(a) => a,
+        None => {
+            log::error!("No se pudo encontrar assets/main.fa en el APK.");
+            return;
+        }
+    };
+
+    let mut buffer = Vec::new();
+    if let Err(e) = std::io::Read::read_to_end(&mut asset, &mut buffer) {
+        log::error!("Error leyendo assets/main.fa: {:?}", e);
+        return;
+    }
+
+    let source = match String::from_utf8(buffer) {
+        Ok(s) => s,
+        Err(e) => {
+            log::error!("assets/main.fa no contiene UTF-8 válido: {:?}", e);
+            return;
+        }
+    };
+
+    log::info!("Parseando script de GUI...");
+    let mut lexer = forja::lexer::Lexer::new(&source);
+    let tokens = match lexer.tokenize() {
+        Ok(t) => t,
+        Err(e) => {
+            log::error!("Error de lexer en Forja: {:?}", e);
+            return;
+        }
+    };
+    let mut parser = forja::parser::Parser::new(tokens);
+    let programa = match parser.parse() {
+        Ok(p) => p,
+        Err(e) => {
+            log::error!("Error de parsing en Forja: {:?}", e);
+            return;
+        }
+    };
+
+    log::info!("Lanzando UI dinámica sobre Xilem/Masonry...");
+    if let Err(e) = forja_gui_rt::gui_nativa::build_and_run_android(&programa, None, true, app) {
+        log::error!("Error en ejecución de GUI: {}", e);
+    }
+}
+
+// ─── Tests ──────────────────────────────────────────────────────
+ 
 #[cfg(test)]
 mod tests {
     use super::*;
-
+ 
     #[test]
     fn test_crear_y_destruir_sesion() {
         let handle = crear_session_inner(1000).unwrap();
         assert!(handle >= 0);
         destruir_session_inner(handle).unwrap();
     }
-
+ 
     #[test]
     fn test_sesion_invalida() {
         let result = destruir_session_inner(999);
