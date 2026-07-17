@@ -472,7 +472,7 @@ fn android_main(app: forja_gui_rt::winit::platform::android::activity::AndroidAp
     };
 
     log::info!("Lanzando UI dinámica sobre Xilem/Masonry...");
-    if let Err(e) = forja_gui_rt::gui_nativa::build_and_run_android(&programa, None, true, app) {
+    if let Err(e) = forja_gui_rt::gui_nativa::build_and_run_android(&programa, None, None, true, app) {
         log::error!("Error en ejecución de GUI: {}", e);
     }
 }
