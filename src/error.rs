@@ -207,6 +207,10 @@ impl From<forja::vm_fast::ErrFast> for ForjaAndroidError {
                 mensaje: format!("Índice fuera de rango: {}", m),
                 codigo: RuntimeErrorCode::IndiceFueraRango,
             },
+            forja::vm_fast::ErrFast::OverflowArit => ForjaAndroidError::Runtime {
+                mensaje: "Overflow aritmético".to_string(),
+                codigo: RuntimeErrorCode::Desconocido,
+            },
             forja::vm_fast::ErrFast::ErrorPropagado(_) => ForjaAndroidError::Runtime {
                 mensaje: "Error propagado con el operador ?".to_string(),
                 codigo: RuntimeErrorCode::ErrorPropagado,
