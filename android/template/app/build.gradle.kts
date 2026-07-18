@@ -31,7 +31,7 @@ android {
 }
 
 dependencies {
-    implementation(files("libs/forja-android-rt-0.8.4.aar"))
+    implementation(files("libs/forja-android-rt-0.8.5.aar"))
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.activity:activity-ktx:1.9.3")
 }

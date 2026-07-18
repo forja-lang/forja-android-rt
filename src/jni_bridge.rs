@@ -3,13 +3,13 @@
 // Convierte los valores internos de la VM de Forja (ValorFast con NaN Tagging)
 // a objetos Java (Long, Double, String, ArrayList, HashMap, etc.) y viceversa.
 
-use jni::JNIEnv;
-use jni::objects::{JObject, JString, JValue};
-use jni::sys::{jobject, jstring, jlong, jdouble, jint, jboolean};
 use jni::errors::Error as JniError;
+use jni::objects::{JObject, JString, JValue};
+use jni::sys::{jboolean, jdouble, jint, jlong, jobject, jstring};
+use jni::JNIEnv;
 
 use crate::error::{ForjaAndroidError, RuntimeErrorCode};
-use forja::vm_fast::{ForjaFast, ValorFast, ObjVal};
+use forja::vm_fast::{ForjaFast, ObjVal, ValorFast};
 
 // ═════════════════════════════════════════════════════════════════
 // Conversión: ValorFast (Forja) → Java Object
@@ -29,33 +29,22 @@ pub fn valor_a_java<'local>(
     // Booleano
     if val.es_booleano() {
         let b = val.a_booleano();
-        let bool_obj = env.new_object(
-            "java/lang/Boolean",
-            "(Z)V",
-            &[JValue::Bool(b as jboolean)],
-        )?;
+        let bool_obj =
+            env.new_object("java/lang/Boolean", "(Z)V", &[JValue::Bool(b as jboolean)])?;
         return Ok(bool_obj);
     }
 
     // Entero
     if val.es_entero() {
         let n = val.a_entero();
-        let long_obj = env.new_object(
-            "java/lang/Long",
-            "(J)V",
-            &[JValue::Long(n as jlong)],
-        )?;
+        let long_obj = env.new_object("java/lang/Long", "(J)V", &[JValue::Long(n as jlong)])?;
         return Ok(long_obj);
     }
 
     // Flotante (Decimal)
     if val.es_flotante() {
         let f = val.a_flotante();
-        let double_obj = env.new_object(
-            "java/lang/Double",
-            "(D)V",
-            &[JValue::Double(f)],
-        )?;
+        let double_obj = env.new_object("java/lang/Double", "(D)V", &[JValue::Double(f)])?;
         return Ok(double_obj);
     }
 
@@ -163,7 +152,9 @@ fn exacto_a_bigdecimal<'local>(
     let bigint = env.new_object(
         "java/math/BigInteger",
         "([B)V",
-        &[JValue::Object(&env.byte_array_from_slice(&coeff_bytes)?.into())],
+        &[JValue::Object(
+            &env.byte_array_from_slice(&coeff_bytes)?.into(),
+        )],
     )?;
 
     let bd = env.new_object(
@@ -201,7 +192,10 @@ fn objeto_a_forja_object<'local>(
     let obj = env.new_object(
         "com/forja/ForjaObject",
         "(Ljava/lang/String;Ljava/util/Map;)V",
-        &[JValue::Object(&jclass_name.into()), JValue::Object(&fields_map)],
+        &[
+            JValue::Object(&jclass_name.into()),
+            JValue::Object(&fields_map),
+        ],
     )?;
 
     Ok(obj)
@@ -214,7 +208,12 @@ fn obtener_nombre_clase_java<'local>(
 ) -> Result<String, JniError> {
     let class_val = env.call_method(obj, "getClass", "()Ljava/lang/Class;", &[])?;
     let class_jobj = class_val.l()?;
-    let name_val = env.call_method(&JObject::from(class_jobj), "getName", "()Ljava/lang/String;", &[])?;
+    let name_val = env.call_method(
+        &JObject::from(class_jobj),
+        "getName",
+        "()Ljava/lang/String;",
+        &[],
+    )?;
     let name_jobj = name_val.l()?;
     let name: String = env.get_string(&JString::from(name_jobj))?.into();
     Ok(name)
@@ -274,17 +273,15 @@ pub fn java_a_valor<'local>(
 
         // BigDecimal → Exacto
         "java.math.BigDecimal" => {
-            let unscaled = env.call_method(obj, "unscaledValue", "()Ljava/math/BigInteger;", &[])?;
+            let unscaled =
+                env.call_method(obj, "unscaledValue", "()Ljava/math/BigInteger;", &[])?;
             let scale = env.call_method(obj, "scale", "()I", &[])?;
             let scale_u = scale.i()? as u32;
 
-            let coeff_bytes = env.call_method(
-                &JObject::from(unscaled.l()?),
-                "toByteArray",
-                "()[B",
-                &[],
-            )?;
-            let byte_arr = unsafe { jni::objects::JPrimitiveArray::from_raw(coeff_bytes.l()?.into_raw()) };
+            let coeff_bytes =
+                env.call_method(&JObject::from(unscaled.l()?), "toByteArray", "()[B", &[])?;
+            let byte_arr =
+                unsafe { jni::objects::JPrimitiveArray::from_raw(coeff_bytes.l()?.into_raw()) };
             let bytes = env.convert_byte_array(&byte_arr)?;
             let coeff = bytes_a_i128_be(&bytes);
 
@@ -313,7 +310,10 @@ pub fn java_a_valor<'local>(
         }
 
         // HashMap, Map → Mapa
-        "java.util.HashMap" | "java.util.Map" | "java.util.AbstractMap" | "java.util.LinkedHashMap" => {
+        "java.util.HashMap"
+        | "java.util.Map"
+        | "java.util.AbstractMap"
+        | "java.util.LinkedHashMap" => {
             let entry_set = env.call_method(obj, "entrySet", "()Ljava/util/Set;", &[])?;
             let iter_obj = env.call_method(
                 &JObject::from(entry_set.l()?),
@@ -332,7 +332,8 @@ pub fn java_a_valor<'local>(
                 let entry = env.call_method(&iter, "next", "()Ljava/lang/Object;", &[])?;
                 let entry_obj = JObject::from(entry.l()?);
                 let key_obj = env.call_method(&entry_obj, "getKey", "()Ljava/lang/Object;", &[])?;
-                let val_obj = env.call_method(&entry_obj, "getValue", "()Ljava/lang/Object;", &[])?;
+                let val_obj =
+                    env.call_method(&entry_obj, "getValue", "()Ljava/lang/Object;", &[])?;
 
                 let key_jstr = JString::from(JObject::from(key_obj.l()?));
                 let key: String = env.get_string(&key_jstr)?.into();
@@ -372,7 +373,8 @@ pub fn java_a_valor<'local>(
                 }
                 let entry = env.call_method(&iter, "next", "()Ljava/lang/Object;", &[])?;
                 let entry_obj = JObject::from(entry.l()?);
-                let val_obj = env.call_method(&entry_obj, "getValue", "()Ljava/lang/Object;", &[])?;
+                let val_obj =
+                    env.call_method(&entry_obj, "getValue", "()Ljava/lang/Object;", &[])?;
                 let val_v = java_a_valor(env, vm, &JObject::from(val_obj.l()?))?;
                 campos_forja.push(val_v);
             }
@@ -501,24 +503,29 @@ pub fn error_a_java_error<'local>(
     error: &ForjaAndroidError,
 ) -> Result<JObject<'local>, JniError> {
     let (mensaje, linea, columna, tipo_str) = match error {
-        ForjaAndroidError::Compile { mensaje, linea, columna, sugerencia: _ } => {
-            (mensaje.clone(), *linea as i32, *columna as i32, "COMPILE".to_string())
-        }
+        ForjaAndroidError::Compile {
+            mensaje,
+            linea,
+            columna,
+            sugerencia: _,
+        } => (
+            mensaje.clone(),
+            *linea as i32,
+            *columna as i32,
+            "COMPILE".to_string(),
+        ),
         ForjaAndroidError::Runtime { mensaje, codigo } => {
             (mensaje.clone(), 0, 0, format!("RUNTIME_{:?}", codigo))
         }
         ForjaAndroidError::Contract { mensaje, linea } => {
             (mensaje.clone(), *linea as i32, 0, "CONTRACT".to_string())
         }
-        ForjaAndroidError::Timeout { mensaje, instrucciones: _ } => {
-            (mensaje.clone(), 0, 0, "TIMEOUT".to_string())
-        }
-        ForjaAndroidError::Internal { mensaje } => {
-            (mensaje.clone(), 0, 0, "INTERNAL".to_string())
-        }
-        ForjaAndroidError::Jni(msg) => {
-            (msg.clone(), 0, 0, "JNI".to_string())
-        }
+        ForjaAndroidError::Timeout {
+            mensaje,
+            instrucciones: _,
+        } => (mensaje.clone(), 0, 0, "TIMEOUT".to_string()),
+        ForjaAndroidError::Internal { mensaje } => (mensaje.clone(), 0, 0, "INTERNAL".to_string()),
+        ForjaAndroidError::Jni(msg) => (msg.clone(), 0, 0, "JNI".to_string()),
     };
 
     let jmsg = env.new_string(&mensaje)?;

@@ -8,16 +8,16 @@ mod native_android;
 use std::sync::Mutex;
 use std::time::Instant;
 
+use jni::objects::{GlobalRef, JClass, JObject, JString};
+use jni::sys::{jbyteArray, jlong, jobject, jstring};
 use jni::JNIEnv;
-use jni::objects::{JClass, JString, JObject, GlobalRef};
-use jni::sys::{jlong, jstring, jbyteArray, jobject};
 use jni::JavaVM;
 
-use forja::vm_fast::{ForjaFast, ValorFast};
 use forja::bytecode;
+use forja::vm_fast::{ForjaFast, ValorFast};
 
-use crate::error::{ForjaAndroidError, lanzar_excepcion, panic_a_excepcion};
-use crate::jni_bridge::{valor_a_java, resultado_a_java};
+use crate::error::{lanzar_excepcion, panic_a_excepcion, ForjaAndroidError};
+use crate::jni_bridge::{resultado_a_java, valor_a_java};
 
 const ANDROID_RT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_MAX_INST: usize = 10_000_000;
@@ -36,7 +36,9 @@ struct ForjaSessionInner {
 impl ForjaSessionInner {
     /// Invoca el callback de output (Consumer<String>) si está registrado.
     fn call_output_callback(&self, line: &str) {
-        let Some(cb) = &self.output_callback else { return };
+        let Some(cb) = &self.output_callback else {
+            return;
+        };
         let Some(jvm) = JAVA_VM.get() else { return };
         if let Ok(mut env) = jvm.attach_current_thread() {
             if let Ok(jstr) = env.new_string(line) {
@@ -52,15 +54,14 @@ impl ForjaSessionInner {
 
     /// Invoca el callback de input (Supplier<String>) si está registrado.
     fn call_input_callback(&self) -> Option<String> {
-        let Some(cb) = &self.input_callback else { return None };
-        let Some(jvm) = JAVA_VM.get() else { return None };
+        let Some(cb) = &self.input_callback else {
+            return None;
+        };
+        let Some(jvm) = JAVA_VM.get() else {
+            return None;
+        };
         if let Ok(mut env) = jvm.attach_current_thread() {
-            let result = env.call_method(
-                cb.as_obj(),
-                "get",
-                "()Ljava/lang/Object;",
-                &[],
-            );
+            let result = env.call_method(cb.as_obj(), "get", "()Ljava/lang/Object;", &[]);
             if let Ok(val) = result {
                 if let Ok(jstr) = val.l() {
                     if let Ok(s) = env.get_string(&JString::from(jstr)) {
@@ -119,15 +120,18 @@ fn con_sesion<R>(
     let guard = sessions().lock().map_err(|e| ForjaAndroidError::Internal {
         mensaje: format!("Error lockeando sessions: {}", e),
     })?;
-    let session_mutex = guard
-        .get(idx)
-        .and_then(|s| s.as_ref())
-        .ok_or_else(|| ForjaAndroidError::Internal {
-            mensaje: format!("Handle de sesión inválido: {}", handle),
+    let session_mutex =
+        guard
+            .get(idx)
+            .and_then(|s| s.as_ref())
+            .ok_or_else(|| ForjaAndroidError::Internal {
+                mensaje: format!("Handle de sesión inválido: {}", handle),
+            })?;
+    let mut session = session_mutex
+        .lock()
+        .map_err(|e| ForjaAndroidError::Internal {
+            mensaje: format!("Error lockeando sesión: {}", e),
         })?;
-    let mut session = session_mutex.lock().map_err(|e| ForjaAndroidError::Internal {
-        mensaje: format!("Error lockeando sesión: {}", e),
-    })?;
     f(&mut *session)
 }
 
@@ -170,7 +174,10 @@ pub extern "C" fn Java_com_forja_Runtime_nativeVersion<'local>(
 ) -> jstring {
     jni_panic_boundary!(env, {
         let v = format!("forja-android-rt v{}", ANDROID_RT_VERSION);
-        env.new_string(&v).ok().map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
+        env.new_string(&v)
+            .ok()
+            .map(|s| s.into_raw())
+            .unwrap_or(std::ptr::null_mut())
     })
 }
 
@@ -181,10 +188,17 @@ pub extern "C" fn Java_com_forja_Runtime_nativeCrearSession<'local>(
     max_inst: jlong,
 ) -> jlong {
     jni_panic_boundary!(env, {
-        let max = if max_inst <= 0 { DEFAULT_MAX_INST } else { max_inst as usize };
+        let max = if max_inst <= 0 {
+            DEFAULT_MAX_INST
+        } else {
+            max_inst as usize
+        };
         match crear_session_inner(max) {
             Ok(h) => h,
-            Err(e) => { let _ = lanzar_excepcion(&mut env, e); -1 }
+            Err(e) => {
+                let _ = lanzar_excepcion(&mut env, e);
+                -1
+            }
         }
     })
 }
@@ -229,12 +243,15 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEjecutar<'local>(
             let source_str: String = env.get_string(&source)?.into();
             let inicio = Instant::now();
 
-            let bc = forja::compilar_pipeline(&source_str)
-                .map_err(|e| ForjaAndroidError::from(e))?;
+            let bc =
+                forja::compilar_pipeline(&source_str).map_err(|e| ForjaAndroidError::from(e))?;
             let antes = session.vm.ejecutadas;
 
             session.vm.cargar_bytecode(bc);
-            session.vm.ejecutar().map_err(|e| ForjaAndroidError::from(e))?;
+            session
+                .vm
+                .ejecutar()
+                .map_err(|e| ForjaAndroidError::from(e))?;
 
             let duracion = inicio.elapsed().as_nanos() as u64;
             let ejec = session.vm.ejecutadas - antes;
@@ -247,7 +264,10 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEjecutar<'local>(
 
         match result {
             Ok(obj) => obj.into_raw(),
-            Err(e) => { let _ = lanzar_excepcion(&mut env, e); std::ptr::null_mut() }
+            Err(e) => {
+                let _ = lanzar_excepcion(&mut env, e);
+                std::ptr::null_mut()
+            }
         }
     })
 }
@@ -262,15 +282,17 @@ pub extern "C" fn Java_com_forja_Runtime_nativeCompilarABytecode<'local>(
     jni_panic_boundary!(env, {
         let result = (|| -> Result<jbyteArray, ForjaAndroidError> {
             let src: String = env.get_string(&source)?.into();
-            let bc = forja::compilar_pipeline(&src)
-                .map_err(|e| ForjaAndroidError::from(e))?;
+            let bc = forja::compilar_pipeline(&src).map_err(|e| ForjaAndroidError::from(e))?;
             let data = bytecode::serializar_bytecode(&bc);
             let arr = env.byte_array_from_slice(&data)?;
             Ok(arr.as_raw())
         })();
         match result {
             Ok(arr) => arr,
-            Err(e) => { let _ = lanzar_excepcion(&mut env, e); std::ptr::null_mut() }
+            Err(e) => {
+                let _ = lanzar_excepcion(&mut env, e);
+                std::ptr::null_mut()
+            }
         }
     })
 }
@@ -286,15 +308,19 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEjecutarBytecode<'local>(
         let result = con_sesion(session_ptr, |session| {
             let bc_arr = unsafe { jni::objects::JPrimitiveArray::from_raw(bytecode_arr) };
             let bytes = env.convert_byte_array(&bc_arr)?;
-            let opcodes = bytecode::deserializar_bytecode(&bytes)
-                .ok_or_else(|| ForjaAndroidError::Internal {
+            let opcodes = bytecode::deserializar_bytecode(&bytes).ok_or_else(|| {
+                ForjaAndroidError::Internal {
                     mensaje: "Bytecode inválido o CRC incorrecto".to_string(),
-                })?;
+                }
+            })?;
 
             let antes = session.vm.ejecutadas;
             let inicio = Instant::now();
             session.vm.cargar_bytecode(opcodes);
-            session.vm.ejecutar().map_err(|e| ForjaAndroidError::from(e))?;
+            session
+                .vm
+                .ejecutar()
+                .map_err(|e| ForjaAndroidError::from(e))?;
 
             let duracion = inicio.elapsed().as_nanos() as u64;
             let ejec = session.vm.ejecutadas - antes;
@@ -314,7 +340,10 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEjecutarBytecode<'local>(
 
         match result {
             Ok(obj) => obj.into_raw(),
-            Err(e) => { let _ = lanzar_excepcion(&mut env, e); std::ptr::null_mut() }
+            Err(e) => {
+                let _ = lanzar_excepcion(&mut env, e);
+                std::ptr::null_mut()
+            }
         }
     })
 }
@@ -331,12 +360,19 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEvaluar<'local>(
             let expr: String = env.get_string(&expresion)?.into();
             let wrapped = format!("funcion __expr__() {{ retornar {} }} __expr__()", expr);
 
-            let bc = forja::compilar_pipeline(&wrapped)
-                .map_err(|e| ForjaAndroidError::from(e))?;
+            let bc = forja::compilar_pipeline(&wrapped).map_err(|e| ForjaAndroidError::from(e))?;
             session.vm.cargar_bytecode(bc);
-            session.vm.ejecutar().map_err(|e| ForjaAndroidError::from(e))?;
+            session
+                .vm
+                .ejecutar()
+                .map_err(|e| ForjaAndroidError::from(e))?;
 
-            let valor = session.vm.stack.last().copied().unwrap_or(ValorFast::nulo());
+            let valor = session
+                .vm
+                .stack
+                .last()
+                .copied()
+                .unwrap_or(ValorFast::nulo());
             let output = session.vm.obtener_output().to_vec();
             session.vm.output.clear();
 
@@ -352,7 +388,10 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEvaluar<'local>(
 
         match result {
             Ok(obj) => obj.into_raw(),
-            Err(e) => { let _ = lanzar_excepcion(&mut env, e); std::ptr::null_mut() }
+            Err(e) => {
+                let _ = lanzar_excepcion(&mut env, e);
+                std::ptr::null_mut()
+            }
         }
     })
 }
@@ -368,12 +407,16 @@ pub extern "C" fn Java_com_forja_Runtime_nativeSetOutputCallback<'local>(
         session.output_callback = if callback.is_null() {
             None
         } else {
-            Some(env.new_global_ref(callback)
-                .map_err(|e| ForjaAndroidError::Jni(e.to_string()))?)
+            Some(
+                env.new_global_ref(callback)
+                    .map_err(|e| ForjaAndroidError::Jni(e.to_string()))?,
+            )
         };
         Ok(())
     });
-    if let Err(e) = result { let _ = lanzar_excepcion(&mut env, e); }
+    if let Err(e) = result {
+        let _ = lanzar_excepcion(&mut env, e);
+    }
 }
 
 #[no_mangle]
@@ -387,30 +430,28 @@ pub extern "C" fn Java_com_forja_Runtime_nativeSetInputCallback<'local>(
         session.input_callback = if callback.is_null() {
             None
         } else {
-            Some(env.new_global_ref(callback)
-                .map_err(|e| ForjaAndroidError::Jni(e.to_string()))?)
+            Some(
+                env.new_global_ref(callback)
+                    .map_err(|e| ForjaAndroidError::Jni(e.to_string()))?,
+            )
         };
         Ok(())
     });
-    if let Err(e) = result { let _ = lanzar_excepcion(&mut env, e); }
+    if let Err(e) = result {
+        let _ = lanzar_excepcion(&mut env, e);
+    }
 }
 
 // ─── JNI OnLoad / OnUnload ──────────────────────────────────────
- 
+
 #[no_mangle]
-pub extern "C" fn JNI_OnLoad(
-    vm: jni::JavaVM,
-    _reserved: *mut std::ffi::c_void,
-) -> jni::sys::jint {
+pub extern "C" fn JNI_OnLoad(vm: jni::JavaVM, _reserved: *mut std::ffi::c_void) -> jni::sys::jint {
     let _ = JAVA_VM.set(vm);
     jni::sys::JNI_VERSION_1_6
 }
 
 #[no_mangle]
-pub extern "C" fn JNI_OnUnload(
-    _vm: jni::JavaVM,
-    _reserved: *mut std::ffi::c_void,
-) {
+pub extern "C" fn JNI_OnUnload(_vm: jni::JavaVM, _reserved: *mut std::ffi::c_void) {
     if let Ok(mut guard) = sessions().lock() {
         guard.clear();
     }
@@ -425,19 +466,20 @@ fn android_main(app: forja_gui_rt::winit::platform::android::activity::AndroidAp
     android_logger::init_once(
         android_logger::Config::default()
             .with_max_level(log::LevelFilter::Debug)
-            .with_tag("ForjaRuntime")
+            .with_tag("ForjaRuntime"),
     );
 
     log::info!("Iniciando Forja Android Native Activity...");
 
     let asset_manager = app.asset_manager();
-    let mut asset = match asset_manager.open(std::ffi::CStr::from_bytes_with_nul(b"main.fa\0").unwrap()) {
-        Some(a) => a,
-        None => {
-            log::error!("No se pudo encontrar assets/main.fa en el APK.");
-            return;
-        }
-    };
+    let mut asset =
+        match asset_manager.open(std::ffi::CStr::from_bytes_with_nul(b"main.fa\0").unwrap()) {
+            Some(a) => a,
+            None => {
+                log::error!("No se pudo encontrar assets/main.fa en el APK.");
+                return;
+            }
+        };
 
     let mut buffer = Vec::new();
     if let Err(e) = std::io::Read::read_to_end(&mut asset, &mut buffer) {
@@ -472,24 +514,26 @@ fn android_main(app: forja_gui_rt::winit::platform::android::activity::AndroidAp
     };
 
     log::info!("Lanzando UI dinámica sobre Xilem/Masonry...");
-    if let Err(e) = forja_gui_rt::gui_nativa::build_and_run_android(&programa, None, None, true, app) {
+    if let Err(e) =
+        forja_gui_rt::gui_nativa::build_and_run_android(&programa, None, None, true, app)
+    {
         log::error!("Error en ejecución de GUI: {}", e);
     }
 }
 
 // ─── Tests ──────────────────────────────────────────────────────
- 
+
 #[cfg(test)]
 mod tests {
     use super::*;
- 
+
     #[test]
     fn test_crear_y_destruir_sesion() {
         let handle = crear_session_inner(1000).unwrap();
         assert!(handle >= 0);
         destruir_session_inner(handle).unwrap();
     }
- 
+
     #[test]
     fn test_sesion_invalida() {
         let result = destruir_session_inner(999);

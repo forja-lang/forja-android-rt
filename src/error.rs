@@ -1,8 +1,8 @@
 // Forja Android RT — Error Handling
 // Mapea errores del compilador/VM de Forja a excepciones Java via JNI.
 
-use jni::JNIEnv;
 use jni::errors::Error as JniError;
+use jni::JNIEnv;
 
 /// Clases de excepción Java en el package com.forja.
 mod exc_class {
@@ -30,19 +30,14 @@ pub enum ForjaAndroidError {
         codigo: RuntimeErrorCode,
     },
     /// Error de contrato (pre/post condición).
-    Contract {
-        mensaje: String,
-        linea: usize,
-    },
+    Contract { mensaje: String, linea: usize },
     /// Límite de ejecución excedido.
     Timeout {
         mensaje: String,
         instrucciones: usize,
     },
     /// Error interno de Rust (panic, bug) o JNI.
-    Internal {
-        mensaje: String,
-    },
+    Internal { mensaje: String },
     /// Error JNI (problema de comunicación con Java).
     Jni(String),
 }
@@ -64,8 +59,17 @@ pub enum RuntimeErrorCode {
 impl std::fmt::Display for ForjaAndroidError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ForjaAndroidError::Compile { mensaje, linea, columna, sugerencia } => {
-                write!(f, "Error de compilación en línea {}:{}: {}. Sugerencia: {}", linea, columna, mensaje, sugerencia)
+            ForjaAndroidError::Compile {
+                mensaje,
+                linea,
+                columna,
+                sugerencia,
+            } => {
+                write!(
+                    f,
+                    "Error de compilación en línea {}:{}: {}. Sugerencia: {}",
+                    linea, columna, mensaje, sugerencia
+                )
             }
             ForjaAndroidError::Runtime { mensaje, codigo } => {
                 write!(f, "[{:?}] {}", codigo, mensaje)
@@ -73,7 +77,10 @@ impl std::fmt::Display for ForjaAndroidError {
             ForjaAndroidError::Contract { mensaje, linea } => {
                 write!(f, "Error de contrato en línea {}: {}", linea, mensaje)
             }
-            ForjaAndroidError::Timeout { mensaje, instrucciones } => {
+            ForjaAndroidError::Timeout {
+                mensaje,
+                instrucciones,
+            } => {
                 write!(f, "Timeout: {} ({} instrucciones)", mensaje, instrucciones)
             }
             ForjaAndroidError::Internal { mensaje } => {

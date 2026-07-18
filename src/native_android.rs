@@ -6,9 +6,9 @@
 // Las funciones marcadas como "stub" devuelven Error("no soportado en Android")
 // hasta que se implementen con JNI.
 
-use forja::vm_fast::{ForjaFast, ValorFast, ErrFast};
 use forja::native_registry::NativeRegistry;
 use forja::symbol_table::SymId;
+use forja::vm_fast::{ErrFast, ForjaFast, ValorFast};
 
 /// Registra las funciones nativas Android en un NativeRegistry.
 /// Reemplaza ciertas funciones del registro por defecto con versiones
@@ -37,12 +37,11 @@ pub fn registrar_nativas_android(registry: &mut NativeRegistry) {
 }
 
 /// Stub para funciones nativas no soportadas en Android.
-fn stub_no_soportado(
-    _vm: &mut ForjaFast,
-    _args: &[ValorFast],
-) -> Result<ValorFast, ErrFast> {
+fn stub_no_soportado(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
     // Crear un valor de error similar a cómo Forja maneja errores
-    Err(ErrFast::TipoInv("Función no soportada en Android".to_string()))
+    Err(ErrFast::TipoInv(
+        "Función no soportada en Android".to_string(),
+    ))
 }
 
 /// Crea un NativeRegistry con todas las funciones Android.

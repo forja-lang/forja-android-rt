@@ -1,6 +1,6 @@
 [package]
 name = "forja-android-rt"
-version = "0.8.4"
+version = "0.8.5"
 edition = "2021"
 description = "Forja Runtime for Android - JNI bridge for executing .fa scripts on Android"
 authors = ["lococoi"]
