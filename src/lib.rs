@@ -256,7 +256,7 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEjecutar<'local>(
             let duracion = inicio.elapsed().as_nanos() as u64;
             let ejec = session.vm.ejecutadas - antes;
             let output = session.vm.obtener_output().to_vec();
-            session.vm.output.clear();
+            session.vm.output.lock().unwrap().clear();
 
             resultado_a_java(&mut env, output, ejec as usize, duracion)
                 .map_err(|e| ForjaAndroidError::Jni(e.to_string()))
@@ -325,7 +325,7 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEjecutarBytecode<'local>(
             let duracion = inicio.elapsed().as_nanos() as u64;
             let ejec = session.vm.ejecutadas - antes;
             let output = session.vm.obtener_output().to_vec();
-            session.vm.output.clear();
+            session.vm.output.lock().unwrap().clear();
 
             // Invocar callback de output si está registrado
             if session.output_callback.is_some() {
@@ -374,7 +374,7 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEvaluar<'local>(
                 .copied()
                 .unwrap_or(ValorFast::nulo());
             let output = session.vm.obtener_output().to_vec();
-            session.vm.output.clear();
+            session.vm.output.lock().unwrap().clear();
 
             if output.is_empty() {
                 valor_a_java(&mut env, &session.vm, valor)

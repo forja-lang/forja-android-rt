@@ -379,7 +379,8 @@ pub fn java_a_valor<'local>(
                 campos_forja.push(val_v);
             }
 
-            let mut obj_val = ObjVal::new(sym_id);
+            let shape_id = vm.shape_registry.get_or_create(sym_id);
+            let mut obj_val = ObjVal::new(sym_id, shape_id);
             obj_val.campos_vec = campos_forja;
             let idx = vm.alloc_obj(obj_val);
             Ok(ValorFast::objeto(idx))
