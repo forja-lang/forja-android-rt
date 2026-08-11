@@ -4,6 +4,7 @@
 mod error;
 mod jni_bridge;
 mod native_android;
+pub mod hot_reload;
 
 use std::sync::Mutex;
 use std::time::Instant;
@@ -473,6 +474,9 @@ fn android_main(app: forja_gui_rt::winit::platform::android::activity::AndroidAp
     );
 
     log::info!("Iniciando Forja Android Native Activity...");
+
+    // Iniciar servidor nativo de Hot-Reload en segundo plano (puerto 7355)
+    let _hot_reload_server = hot_reload::HotReloadServer::start(None);
 
     let asset_manager = app.asset_manager();
     let mut asset =
