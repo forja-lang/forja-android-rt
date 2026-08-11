@@ -57,6 +57,7 @@ impl ForjaSessionInner {
     }
 
     /// Invoca el callback de input (Supplier<String>) si está registrado.
+    #[allow(dead_code)]
     fn call_input_callback(&self) -> Option<String> {
         let Some(cb) = &self.input_callback else {
             return None;

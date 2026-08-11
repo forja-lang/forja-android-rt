@@ -6,6 +6,7 @@ use jni::JNIEnv;
 
 /// Clases de excepción Java en el package com.forja.
 mod exc_class {
+    #[allow(dead_code)]
     pub const FORJA_ERROR: &str = "com/forja/ForjaException";
     pub const COMPILE_ERROR: &str = "com/forja/ForjaCompileError";
     pub const RUNTIME_ERROR: &str = "com/forja/ForjaRuntimeError";
@@ -132,6 +133,11 @@ impl From<String> for ForjaAndroidError {
                 mensaje: msg,
                 codigo: RuntimeErrorCode::DivisionPorCero,
             }
+        } else if lower.contains("contrato") || lower.contains("precondición") || lower.contains("postcondición") {
+            ForjaAndroidError::Contract {
+                mensaje: msg,
+                linea: 0,
+            }
         } else if lower.contains("límite") || lower.contains("max_inst") {
             ForjaAndroidError::Timeout {
                 mensaje: msg,
@@ -183,9 +189,9 @@ impl From<forja::vm_fast::ErrFast> for ForjaAndroidError {
                 mensaje: "División por cero".to_string(),
                 codigo: RuntimeErrorCode::DivisionPorCero,
             },
-            forja::vm_fast::ErrFast::Limite => ForjaAndroidError::Timeout {
+            forja::vm_fast::ErrFast::Limite => ForjaAndroidError::Runtime {
                 mensaje: "Límite de instrucciones excedido".to_string(),
-                instrucciones: 0,
+                codigo: RuntimeErrorCode::LimiteInstrucciones,
             },
             forja::vm_fast::ErrFast::StackUnder(m) => ForjaAndroidError::Runtime {
                 mensaje: format!("Stack underflow: {}", m),

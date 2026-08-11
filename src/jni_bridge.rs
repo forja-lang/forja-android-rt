@@ -202,6 +202,7 @@ fn objeto_a_forja_object<'local>(
 }
 
 /// Obtiene el nombre completo de la clase de un objeto Java (ej: "java.lang.String")
+#[allow(dead_code)]
 fn obtener_nombre_clase_java<'local>(
     env: &mut JNIEnv<'local>,
     obj: &JObject<'local>,
@@ -224,6 +225,7 @@ fn obtener_nombre_clase_java<'local>(
 // ═════════════════════════════════════════════════════════════════
 
 /// Convierte un objeto Java a ValorFast de Forja.
+#[allow(dead_code)]
 pub fn java_a_valor<'local>(
     env: &mut JNIEnv<'local>,
     vm: &mut ForjaFast,
@@ -448,6 +450,7 @@ fn i128_a_bytes_be(n: i128) -> Vec<u8> {
 
 /// Convierte big-endian bytes con signo (formato BigInteger) a i128.
 /// Usa sign-extension vía arithmetic shift: empezar con 0 o -1 y correr.
+#[allow(dead_code)]
 fn bytes_a_i128_be(bytes: &[u8]) -> i128 {
     if bytes.is_empty() {
         return 0;
@@ -499,6 +502,7 @@ pub fn resultado_a_java<'local>(
 }
 
 /// Crea un ForjaError Java desde un ForjaAndroidError.
+#[allow(dead_code)]
 pub fn error_a_java_error<'local>(
     env: &mut JNIEnv<'local>,
     error: &ForjaAndroidError,
