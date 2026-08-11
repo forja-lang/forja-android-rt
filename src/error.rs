@@ -133,7 +133,10 @@ impl From<String> for ForjaAndroidError {
                 mensaje: msg,
                 codigo: RuntimeErrorCode::DivisionPorCero,
             }
-        } else if lower.contains("contrato") || lower.contains("precondición") || lower.contains("postcondición") {
+        } else if lower.contains("contrato")
+            || lower.contains("precondición")
+            || lower.contains("postcondición")
+        {
             ForjaAndroidError::Contract {
                 mensaje: msg,
                 linea: 0,

@@ -85,8 +85,7 @@ impl HotReloadServer {
             return;
         }
 
-        let payload_len =
-            u32::from_be_bytes([header[4], header[5], header[6], header[7]]) as usize;
+        let payload_len = u32::from_be_bytes([header[4], header[5], header[6], header[7]]) as usize;
         if payload_len == 0 || payload_len > 10_000_000 {
             log::warn!(
                 "[Hot-Reload] Tamaño de código inválido: {} bytes",

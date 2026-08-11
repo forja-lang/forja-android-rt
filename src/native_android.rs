@@ -14,17 +14,32 @@ pub fn registrar_nativas_android(registry: &mut NativeRegistry) {
     registry.registrar("_android_vibrar", android_vibrar);
     registry.registrar("_android_efecto_haptico", android_efecto_haptico);
     registry.registrar("_android_pantalla_encendida", android_pantalla_encendida);
-    registry.registrar("_android_pantalla_orientacion", android_pantalla_orientacion);
+    registry.registrar(
+        "_android_pantalla_orientacion",
+        android_pantalla_orientacion,
+    );
 
     // 2. Notificaciones
-    registry.registrar("_android_notificacion_canal_crear", android_notificacion_canal_crear);
+    registry.registrar(
+        "_android_notificacion_canal_crear",
+        android_notificacion_canal_crear,
+    );
     registry.registrar("_android_notificacion", android_notificacion);
-    registry.registrar("_android_notificacion_cancelar", android_notificacion_cancelar);
+    registry.registrar(
+        "_android_notificacion_cancelar",
+        android_notificacion_cancelar,
+    );
 
     // 3. Almacenamiento & KeyStore
-    registry.registrar("_android_almacenamiento_guardar", android_almacenamiento_guardar);
+    registry.registrar(
+        "_android_almacenamiento_guardar",
+        android_almacenamiento_guardar,
+    );
     registry.registrar("_android_almacenamiento_leer", android_almacenamiento_leer);
-    registry.registrar("_android_almacenamiento_eliminar", android_almacenamiento_eliminar);
+    registry.registrar(
+        "_android_almacenamiento_eliminar",
+        android_almacenamiento_eliminar,
+    );
     registry.registrar("_android_guardar_seguro", android_guardar_seguro);
     registry.registrar("_android_leer_seguro", android_leer_seguro);
 
@@ -44,7 +59,10 @@ pub fn registrar_nativas_android(registry: &mut NativeRegistry) {
     // 7. Permisos & Biometría
     registry.registrar("_android_permiso_verificar", android_permiso_verificar);
     registry.registrar("_android_permiso_solicitar", android_permiso_solicitar);
-    registry.registrar("_android_biometria_autenticar", android_biometria_autenticar);
+    registry.registrar(
+        "_android_biometria_autenticar",
+        android_biometria_autenticar,
+    );
 
     // 8. Intents & Sistema
     registry.registrar("_android_compartir_texto", android_compartir_texto);
@@ -81,7 +99,11 @@ fn android_toast(vm: &mut ForjaFast, args: &[ValorFast]) -> Result<ValorFast, Er
 
 fn android_vibrar(_vm: &mut ForjaFast, args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
     let ms = if let Some(&arg) = args.first() {
-        if arg.es_entero() { arg.a_entero() } else { 100 }
+        if arg.es_entero() {
+            arg.a_entero()
+        } else {
+            100
+        }
     } else {
         100
     };
@@ -99,7 +121,10 @@ fn android_efecto_haptico(vm: &mut ForjaFast, args: &[ValorFast]) -> Result<Valo
     Ok(ValorFast::nulo())
 }
 
-fn android_pantalla_encendida(_vm: &mut ForjaFast, args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_pantalla_encendida(
+    _vm: &mut ForjaFast,
+    args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     let _mantener = if let Some(&arg) = args.first() {
         arg.es_booleano() && arg.a_booleano()
     } else {
@@ -108,7 +133,10 @@ fn android_pantalla_encendida(_vm: &mut ForjaFast, args: &[ValorFast]) -> Result
     Ok(ValorFast::nulo())
 }
 
-fn android_pantalla_orientacion(vm: &mut ForjaFast, args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_pantalla_orientacion(
+    vm: &mut ForjaFast,
+    args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     let _modo = if let Some(&arg) = args.first() {
         extraer_texto(vm, arg)
     } else {
@@ -117,7 +145,10 @@ fn android_pantalla_orientacion(vm: &mut ForjaFast, args: &[ValorFast]) -> Resul
     Ok(ValorFast::nulo())
 }
 
-fn android_notificacion_canal_crear(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_notificacion_canal_crear(
+    _vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     Ok(ValorFast::nulo())
 }
 
@@ -136,23 +167,47 @@ fn android_notificacion(vm: &mut ForjaFast, args: &[ValorFast]) -> Result<ValorF
     Ok(ValorFast::nulo())
 }
 
-fn android_notificacion_cancelar(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_notificacion_cancelar(
+    _vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     Ok(ValorFast::nulo())
 }
 
-fn android_almacenamiento_guardar(vm: &mut ForjaFast, args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
-    let clave = if !args.is_empty() { extraer_texto(vm, args[0]) } else { String::new() };
-    let valor = if args.len() > 1 { extraer_texto(vm, args[1]) } else { String::new() };
+fn android_almacenamiento_guardar(
+    vm: &mut ForjaFast,
+    args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
+    let clave = if !args.is_empty() {
+        extraer_texto(vm, args[0])
+    } else {
+        String::new()
+    };
+    let valor = if args.len() > 1 {
+        extraer_texto(vm, args[1])
+    } else {
+        String::new()
+    };
     log::info!("[Android SharedPreferences] Guardado {}={}", clave, valor);
     Ok(ValorFast::nulo())
 }
 
-fn android_almacenamiento_leer(vm: &mut ForjaFast, args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
-    let defecto = if args.len() > 1 { extraer_texto(vm, args[1]) } else { String::new() };
+fn android_almacenamiento_leer(
+    vm: &mut ForjaFast,
+    args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
+    let defecto = if args.len() > 1 {
+        extraer_texto(vm, args[1])
+    } else {
+        String::new()
+    };
     Ok(texto_val(vm, &defecto))
 }
 
-fn android_almacenamiento_eliminar(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_almacenamiento_eliminar(
+    _vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     Ok(ValorFast::nulo())
 }
 
@@ -178,11 +233,17 @@ fn android_bateria_nivel(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<Val
     Ok(ValorFast::entero(100))
 }
 
-fn android_bateria_cargando(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_bateria_cargando(
+    _vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     Ok(ValorFast::booleano(true))
 }
 
-fn android_sensor_acelerometro(vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_sensor_acelerometro(
+    vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     let arr_idx = vm.alloc_arr(vec![
         ValorFast::flotante(0.0),
         ValorFast::flotante(9.81),
@@ -191,7 +252,10 @@ fn android_sensor_acelerometro(vm: &mut ForjaFast, _args: &[ValorFast]) -> Resul
     Ok(ValorFast::arreglo(arr_idx))
 }
 
-fn android_sensor_giroscopio(vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_sensor_giroscopio(
+    vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     let arr_idx = vm.alloc_arr(vec![
         ValorFast::flotante(0.0),
         ValorFast::flotante(0.0),
@@ -200,23 +264,38 @@ fn android_sensor_giroscopio(vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<
     Ok(ValorFast::arreglo(arr_idx))
 }
 
-fn android_camara_tomar_foto(vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_camara_tomar_foto(
+    vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     Ok(texto_val(vm, ""))
 }
 
-fn android_camara_escanear_qr(vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_camara_escanear_qr(
+    vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     Ok(texto_val(vm, ""))
 }
 
-fn android_permiso_verificar(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_permiso_verificar(
+    _vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     Ok(ValorFast::booleano(true))
 }
 
-fn android_permiso_solicitar(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_permiso_solicitar(
+    _vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     Ok(ValorFast::nulo())
 }
 
-fn android_biometria_autenticar(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_biometria_autenticar(
+    _vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     Ok(ValorFast::booleano(true))
 }
 
@@ -228,14 +307,16 @@ fn android_abrir_url(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFa
     Ok(ValorFast::nulo())
 }
 
-fn android_clipboard_copiar(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
+fn android_clipboard_copiar(
+    _vm: &mut ForjaFast,
+    _args: &[ValorFast],
+) -> Result<ValorFast, ErrFast> {
     Ok(ValorFast::nulo())
 }
 
 fn android_clipboard_pegar(vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
     Ok(texto_val(vm, ""))
 }
-
 
 /// Crea un NativeRegistry con todas las funciones Android.
 pub fn crear_registry_android() -> NativeRegistry {
