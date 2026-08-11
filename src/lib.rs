@@ -33,6 +33,9 @@ struct ForjaSessionInner {
     _bytecode_cache: std::collections::HashMap<u64, Vec<bytecode::Opcode>>,
 }
 
+unsafe impl Send for ForjaSessionInner {}
+unsafe impl Sync for ForjaSessionInner {}
+
 impl ForjaSessionInner {
     /// Invoca el callback de output (Consumer<String>) si está registrado.
     fn call_output_callback(&self, line: &str) {
