@@ -51,10 +51,6 @@ pub fn registrar_nativas_android(registry: &mut NativeRegistry) {
     registry.registrar("_android_abrir_url", android_abrir_url);
     registry.registrar("_android_clipboard_copiar", android_clipboard_copiar);
     registry.registrar("_android_clipboard_pegar", android_clipboard_pegar);
-
-    // Archivos y sistema stubs
-    registry.registrar("_sistema_comando", stub_no_soportado);
-    registry.registrar("_sistema_ejecutar", stub_no_soportado);
 }
 
 // Helpers para alojar cadenas y arreglos en la VM
@@ -240,9 +236,6 @@ fn android_clipboard_pegar(vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<Va
     Ok(texto_val(vm, ""))
 }
 
-fn stub_no_soportado(_vm: &mut ForjaFast, _args: &[ValorFast]) -> Result<ValorFast, ErrFast> {
-    Err(ErrFast::TipoInv("Función no soportada en Android".to_string()))
-}
 
 /// Crea un NativeRegistry con todas las funciones Android.
 pub fn crear_registry_android() -> NativeRegistry {
