@@ -449,9 +449,43 @@ pub extern "C" fn Java_com_forja_Runtime_nativeSetInputCallback<'local>(
 
 // ─── JNI OnLoad / OnUnload ──────────────────────────────────────
 
+fn init_android_logging_and_panic_hook() {
+    #[cfg(target_os = "android")]
+    {
+        android_logger::init_once(
+            android_logger::Config::default()
+                .with_max_level(log::LevelFilter::Debug)
+                .with_tag("ForjaRuntime"),
+        );
+    }
+
+    static PANIC_HOOK_SET: std::sync::Once = std::sync::Once::new();
+    PANIC_HOOK_SET.call_once(|| {
+        std::panic::set_hook(Box::new(|info| {
+            let location = info
+                .location()
+                .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+                .unwrap_or_else(|| "ubicación desconocida".to_string());
+
+            let msg = if let Some(s) = info.payload().downcast_ref::<&str>() {
+                s.to_string()
+            } else if let Some(s) = info.payload().downcast_ref::<String>() {
+                s.clone()
+            } else {
+                "Panic sin mensaje".to_string()
+            };
+
+            log::error!("[Forja PANIC] Panic en Rust ({}): {}", location, msg);
+            eprintln!("[Forja PANIC] Panic en Rust ({}): {}", location, msg);
+        }));
+    });
+}
+
 #[no_mangle]
 pub extern "C" fn JNI_OnLoad(vm: jni::JavaVM, _reserved: *mut std::ffi::c_void) -> jni::sys::jint {
     let _ = JAVA_VM.set(vm);
+    init_android_logging_and_panic_hook();
+    log::info!("ForjaRuntime JNI inicializado con éxito.");
     jni::sys::JNI_VERSION_1_6
 }
 

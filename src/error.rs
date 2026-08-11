@@ -233,6 +233,7 @@ impl From<forja::vm_fast::ErrFast> for ForjaAndroidError {
 /// Lanza una excepción Java correspondiente al error Forja.
 pub fn lanzar_excepcion(env: &mut JNIEnv, error: ForjaAndroidError) -> Result<(), JniError> {
     let mensaje = error.to_string();
+    log::error!("[Forja JNI Error] Excepción enviada a Java: {}", mensaje);
     let class = match &error {
         ForjaAndroidError::Compile { .. } => exc_class::COMPILE_ERROR,
         ForjaAndroidError::Runtime { .. } => exc_class::RUNTIME_ERROR,
@@ -255,7 +256,8 @@ pub fn panic_a_excepcion(env: &mut JNIEnv, panic: Box<dyn std::any::Any + Send>)
     } else {
         "Unknown Forja internal error (panic)".to_string()
     };
-    let _ = env.throw_new(exc_class::INTERNAL_ERROR, msg);
+    log::error!("[Forja JNI Panic] Panic capturado en Rust: {}", msg);
+    let _ = env.throw_new(exc_class::INTERNAL_ERROR, format!("Rust Panic: {}", msg));
 }
 
 // ─── Tests ─────────────────────────────────────────────────────

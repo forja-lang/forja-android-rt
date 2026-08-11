@@ -1,5 +1,6 @@
 package com.forja
 
+import android.util.Log
 import java.util.concurrent.Executors
 import java.util.function.Consumer
 import java.util.function.Supplier
@@ -20,10 +21,17 @@ import java.util.function.Supplier
  */
 object ForjaRuntime {
 
+    private const val TAG = "ForjaRuntime"
     private val executor = Executors.newCachedThreadPool()
 
     init {
-        System.loadLibrary("forja_android_rt")
+        try {
+            System.loadLibrary("forja_android_rt")
+            Log.i(TAG, "Librería nativa forja_android_rt cargada correctamente")
+        } catch (e: UnsatisfiedLinkError) {
+            Log.e(TAG, "Error al cargar la librería nativa forja_android_rt: ${e.message}", e)
+            throw e
+        }
     }
 
     // ─── Información de versión ───────────────────────────────────
@@ -96,10 +104,12 @@ object ForjaRuntime {
                     onResult(result)
                 }
             } catch (e: ForjaException) {
+                Log.e(TAG, "Error de Forja durante ejecución asíncrona: ${e.message}", e)
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
                     onError?.invoke(e.error)
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Error no esperado durante ejecución asíncrona: ${e.message}", e)
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
                     onError?.invoke(
                         ForjaError("Error inesperado: ${e.message}", 0, 0, "INTERNAL")
