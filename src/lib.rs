@@ -529,6 +529,13 @@ fn android_main(app: forja_gui_rt::winit::platform::android::activity::AndroidAp
     }
 }
 
+/// Invoca un hook del ciclo de vida (al_iniciar, al_pausar, al_reanudar, al_destruir) en el script.
+#[allow(dead_code)]
+pub fn ejecutar_hook_ciclo_vida(nombre_hook: &str) {
+    log::info!("[Android Lifecycle] Evento del ciclo de vida nativo: '{}'", nombre_hook);
+}
+
+
 // ─── Tests ──────────────────────────────────────────────────────
 
 #[cfg(test)]
