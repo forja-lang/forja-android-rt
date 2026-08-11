@@ -333,8 +333,10 @@ mod tests {
     fn test_from_errfast_limit() {
         let err = ForjaAndroidError::from(forja::vm_fast::ErrFast::Limite);
         match err {
-            ForjaAndroidError::Timeout { .. } => {} // ok
-            _ => panic!("Expected Timeout error"),
+            ForjaAndroidError::Runtime { codigo, .. } => {
+                assert_eq!(codigo, RuntimeErrorCode::LimiteInstrucciones);
+            }
+            _ => panic!("Expected Runtime error with LimiteInstrucciones"),
         }
     }
 }
