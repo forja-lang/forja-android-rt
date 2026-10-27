@@ -1,10 +1,16 @@
 [package]
 name = "forja-android-rt"
-version = "0.9.3"
+version = "0.9.4"
 edition = "2021"
 description = "Forja Runtime for Android - JNI bridge for executing .fa scripts on Android"
 authors = ["forja-lang"]
 license = "GPL-3.0-or-later"
+repository = "https://github.com/forja-lang/forja"
+homepage = "https://github.com/forja-lang/forja"
+documentation = "https://docs.rs/forja-android-rt"
+readme = "README.md"
+keywords = ["forja", "android", "jni", "runtime", "vm"]
+categories = ["development-tools", "api-bindings"]
 
 [lib]
 crate-type = ["cdylib"]
