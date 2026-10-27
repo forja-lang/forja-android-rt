@@ -248,8 +248,8 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEjecutar<'local>(
             let source_str: String = env.get_string(&source)?.into();
             let inicio = Instant::now();
 
-            let bc =
-                forja::compilar_pipeline(&source_str).map_err(|e| ForjaAndroidError::from(e))?;
+            let (bc, _contratos) = forja::compilar_pipeline_completa(&source_str)
+                .map_err(|e| ForjaAndroidError::from(e))?;
             let antes = session.vm.ejecutadas;
 
             session.vm.cargar_bytecode(bc);
@@ -287,7 +287,8 @@ pub extern "C" fn Java_com_forja_Runtime_nativeCompilarABytecode<'local>(
     jni_panic_boundary!(env, {
         let result = (|| -> Result<jbyteArray, ForjaAndroidError> {
             let src: String = env.get_string(&source)?.into();
-            let bc = forja::compilar_pipeline(&src).map_err(|e| ForjaAndroidError::from(e))?;
+            let (bc, _contratos) =
+                forja::compilar_pipeline_completa(&src).map_err(|e| ForjaAndroidError::from(e))?;
             let data = bytecode::serializar_bytecode(&bc);
             let arr = env.byte_array_from_slice(&data)?;
             Ok(arr.as_raw())
@@ -365,7 +366,8 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEvaluar<'local>(
             let expr: String = env.get_string(&expresion)?.into();
             let wrapped = format!("funcion __expr__() {{ retornar {} }} __expr__()", expr);
 
-            let bc = forja::compilar_pipeline(&wrapped).map_err(|e| ForjaAndroidError::from(e))?;
+            let (bc, _contratos) = forja::compilar_pipeline_completa(&wrapped)
+                .map_err(|e| ForjaAndroidError::from(e))?;
             session.vm.cargar_bytecode(bc);
             session
                 .vm
