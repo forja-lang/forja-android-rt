@@ -71,7 +71,7 @@ workflow `rust.yml` del repo padre.
 
 ## Estado
 
-Versión `0.9.4`; el consumo es por ruta desde el workspace Forja.
+Versión `0.9.5`; el consumo es por ruta desde el workspace Forja.
 
 ## Licencia
 
