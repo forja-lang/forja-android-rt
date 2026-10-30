@@ -83,7 +83,12 @@ pub fn valor_a_java<'local>(
     if val.es_objeto() {
         let idx = val.indice_objeto() as usize;
         if let Some(obj) = vm.obj_heap.get(idx) {
-            return objeto_a_forja_object(env, vm, vm.sym_table.get(obj.clase), &obj.campos_vec);
+            return objeto_a_forja_object(
+                env,
+                vm,
+                vm.tabla_simbolos.texto(obj.clase),
+                &obj.campos_vec,
+            );
         }
         return Ok(JObject::null());
     }
@@ -178,7 +183,7 @@ fn objeto_a_forja_object<'local>(
     let fields_map = env.new_object("java/util/HashMap", "()V", &[])?;
 
     for (i, val) in campos.iter().enumerate() {
-        let key = env.new_string(&format!("__campo_{}", i))?;
+        let key = env.new_string(format!("__campo_{}", i))?;
         let jval = valor_a_java(env, vm, *val)?;
         let _ = env.call_method(
             &fields_map,
@@ -209,12 +214,7 @@ fn obtener_nombre_clase_java<'local>(
 ) -> Result<String, JniError> {
     let class_val = env.call_method(obj, "getClass", "()Ljava/lang/Class;", &[])?;
     let class_jobj = class_val.l()?;
-    let name_val = env.call_method(
-        &JObject::from(class_jobj),
-        "getName",
-        "()Ljava/lang/String;",
-        &[],
-    )?;
+    let name_val = env.call_method(&class_jobj, "getName", "()Ljava/lang/String;", &[])?;
     let name_jobj = name_val.l()?;
     let name: String = env.get_string(&JString::from(name_jobj))?.into();
     Ok(name)
@@ -280,8 +280,7 @@ pub fn java_a_valor<'local>(
             let scale = env.call_method(obj, "scale", "()I", &[])?;
             let scale_u = scale.i()? as u32;
 
-            let coeff_bytes =
-                env.call_method(&JObject::from(unscaled.l()?), "toByteArray", "()[B", &[])?;
+            let coeff_bytes = env.call_method(&unscaled.l()?, "toByteArray", "()[B", &[])?;
             let byte_arr =
                 unsafe { jni::objects::JPrimitiveArray::from_raw(coeff_bytes.l()?.into_raw()) };
             let bytes = env.convert_byte_array(&byte_arr)?;
@@ -303,7 +302,7 @@ pub fn java_a_valor<'local>(
                     "(I)Ljava/lang/Object;",
                     &[JValue::Int(i as jint)],
                 )?;
-                let elem_obj = JObject::from(elem.l()?);
+                let elem_obj = elem.l()?;
                 let v = java_a_valor(env, vm, &elem_obj)?;
                 items.push(v);
             }
@@ -317,13 +316,9 @@ pub fn java_a_valor<'local>(
         | "java.util.AbstractMap"
         | "java.util.LinkedHashMap" => {
             let entry_set = env.call_method(obj, "entrySet", "()Ljava/util/Set;", &[])?;
-            let iter_obj = env.call_method(
-                &JObject::from(entry_set.l()?),
-                "iterator",
-                "()Ljava/util/Iterator;",
-                &[],
-            )?;
-            let iter = JObject::from(iter_obj.l()?);
+            let iter_obj =
+                env.call_method(&entry_set.l()?, "iterator", "()Ljava/util/Iterator;", &[])?;
+            let iter = iter_obj.l()?;
 
             let mut map = std::collections::HashMap::new();
             loop {
@@ -332,15 +327,15 @@ pub fn java_a_valor<'local>(
                     break;
                 }
                 let entry = env.call_method(&iter, "next", "()Ljava/lang/Object;", &[])?;
-                let entry_obj = JObject::from(entry.l()?);
+                let entry_obj = entry.l()?;
                 let key_obj = env.call_method(&entry_obj, "getKey", "()Ljava/lang/Object;", &[])?;
                 let val_obj =
                     env.call_method(&entry_obj, "getValue", "()Ljava/lang/Object;", &[])?;
 
-                let key_jstr = JString::from(JObject::from(key_obj.l()?));
+                let key_jstr = JString::from(key_obj.l()?);
                 let key: String = env.get_string(&key_jstr)?.into();
 
-                let val_v = java_a_valor(env, vm, &JObject::from(val_obj.l()?))?;
+                let val_v = java_a_valor(env, vm, &val_obj.l()?)?;
                 map.insert(key, val_v);
             }
 
@@ -354,17 +349,13 @@ pub fn java_a_valor<'local>(
             let fields_map = env.call_method(obj, "getFields", "()Ljava/util/Map;", &[])?;
 
             let cn: String = env.get_string(&JString::from(class_name.l()?))?.into();
-            let sym_id = vm.sym_table.intern(&cn);
+            let sym_id = vm.tabla_simbolos.internar(&cn);
 
-            let fields_jmap = JObject::from(fields_map.l()?);
+            let fields_jmap = fields_map.l()?;
             let entry_set = env.call_method(&fields_jmap, "entrySet", "()Ljava/util/Set;", &[])?;
-            let iter_obj = env.call_method(
-                &JObject::from(entry_set.l()?),
-                "iterator",
-                "()Ljava/util/Iterator;",
-                &[],
-            )?;
-            let iter = JObject::from(iter_obj.l()?);
+            let iter_obj =
+                env.call_method(&entry_set.l()?, "iterator", "()Ljava/util/Iterator;", &[])?;
+            let iter = iter_obj.l()?;
 
             // Recolectar campos en orden
             let mut campos_forja = Vec::new();
@@ -374,14 +365,14 @@ pub fn java_a_valor<'local>(
                     break;
                 }
                 let entry = env.call_method(&iter, "next", "()Ljava/lang/Object;", &[])?;
-                let entry_obj = JObject::from(entry.l()?);
+                let entry_obj = entry.l()?;
                 let val_obj =
                     env.call_method(&entry_obj, "getValue", "()Ljava/lang/Object;", &[])?;
-                let val_v = java_a_valor(env, vm, &JObject::from(val_obj.l()?))?;
+                let val_v = java_a_valor(env, vm, &val_obj.l()?)?;
                 campos_forja.push(val_v);
             }
 
-            let shape_id = vm.shape_registry.get_or_create(sym_id);
+            let shape_id = vm.registro_formas.obtener_o_crear(sym_id);
             let mut obj_val = ObjVal::new(sym_id, shape_id);
             obj_val.campos_vec = campos_forja;
             let idx = vm.alloc_obj(obj_val);

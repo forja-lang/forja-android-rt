@@ -9,7 +9,7 @@ mod native_android;
 use std::sync::Mutex;
 use std::time::Instant;
 
-use jni::objects::{GlobalRef, JClass, JObject, JString};
+use jni::objects::{GlobalRef, JByteArray, JClass, JObject, JString};
 use jni::sys::{jbyteArray, jlong, jobject, jstring};
 use jni::JNIEnv;
 use jni::JavaVM;
@@ -62,9 +62,7 @@ impl ForjaSessionInner {
         let Some(cb) = &self.input_callback else {
             return None;
         };
-        let Some(jvm) = JAVA_VM.get() else {
-            return None;
-        };
+        let jvm = JAVA_VM.get()?;
         if let Ok(mut env) = jvm.attach_current_thread() {
             let result = env.call_method(cb.as_obj(), "get", "()Ljava/lang/Object;", &[]);
             if let Ok(val) = result {
@@ -137,7 +135,7 @@ fn con_sesion<R>(
         .map_err(|e| ForjaAndroidError::Internal {
             mensaje: format!("Error lockeando sesión: {}", e),
         })?;
-    f(&mut *session)
+    f(&mut session)
 }
 
 fn destruir_session_inner(handle: jlong) -> Result<(), ForjaAndroidError> {
@@ -248,22 +246,19 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEjecutar<'local>(
             let source_str: String = env.get_string(&source)?.into();
             let inicio = Instant::now();
 
-            let (bc, _contratos) = forja::compilar_pipeline_completa(&source_str)
-                .map_err(|e| ForjaAndroidError::from(e))?;
+            let (bc, _contratos) =
+                forja::compilar_pipeline_completa(&source_str).map_err(ForjaAndroidError::from)?;
             let antes = session.vm.ejecutadas;
 
             session.vm.cargar_bytecode(bc);
-            session
-                .vm
-                .ejecutar()
-                .map_err(|e| ForjaAndroidError::from(e))?;
+            session.vm.ejecutar().map_err(ForjaAndroidError::from)?;
 
             let duracion = inicio.elapsed().as_nanos() as u64;
             let ejec = session.vm.ejecutadas - antes;
             let output = session.vm.obtener_output().to_vec();
             session.vm.output.lock().unwrap().clear();
 
-            resultado_a_java(&mut env, output, ejec as usize, duracion)
+            resultado_a_java(&mut env, output, ejec, duracion)
                 .map_err(|e| ForjaAndroidError::Jni(e.to_string()))
         });
 
@@ -288,7 +283,7 @@ pub extern "C" fn Java_com_forja_Runtime_nativeCompilarABytecode<'local>(
         let result = (|| -> Result<jbyteArray, ForjaAndroidError> {
             let src: String = env.get_string(&source)?.into();
             let (bc, _contratos) =
-                forja::compilar_pipeline_completa(&src).map_err(|e| ForjaAndroidError::from(e))?;
+                forja::compilar_pipeline_completa(&src).map_err(ForjaAndroidError::from)?;
             let data = bytecode::serializar_bytecode(&bc);
             let arr = env.byte_array_from_slice(&data)?;
             Ok(arr.as_raw())
@@ -308,12 +303,11 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEjecutarBytecode<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     session_ptr: jlong,
-    bytecode_arr: jbyteArray,
+    bytecode_arr: JByteArray<'local>,
 ) -> jobject {
     jni_panic_boundary!(env, {
         let result = con_sesion(session_ptr, |session| {
-            let bc_arr = unsafe { jni::objects::JPrimitiveArray::from_raw(bytecode_arr) };
-            let bytes = env.convert_byte_array(&bc_arr)?;
+            let bytes = env.convert_byte_array(&bytecode_arr)?;
             let opcodes = bytecode::deserializar_bytecode(&bytes).ok_or_else(|| {
                 ForjaAndroidError::Internal {
                     mensaje: "Bytecode inválido o CRC incorrecto".to_string(),
@@ -323,10 +317,7 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEjecutarBytecode<'local>(
             let antes = session.vm.ejecutadas;
             let inicio = Instant::now();
             session.vm.cargar_bytecode(opcodes);
-            session
-                .vm
-                .ejecutar()
-                .map_err(|e| ForjaAndroidError::from(e))?;
+            session.vm.ejecutar().map_err(ForjaAndroidError::from)?;
 
             let duracion = inicio.elapsed().as_nanos() as u64;
             let ejec = session.vm.ejecutadas - antes;
@@ -340,7 +331,7 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEjecutarBytecode<'local>(
                 }
             }
 
-            resultado_a_java(&mut env, output, ejec as usize, duracion)
+            resultado_a_java(&mut env, output, ejec, duracion)
                 .map_err(|e| ForjaAndroidError::Jni(e.to_string()))
         });
 
@@ -366,13 +357,10 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEvaluar<'local>(
             let expr: String = env.get_string(&expresion)?.into();
             let wrapped = format!("funcion __expr__() {{ retornar {} }} __expr__()", expr);
 
-            let (bc, _contratos) = forja::compilar_pipeline_completa(&wrapped)
-                .map_err(|e| ForjaAndroidError::from(e))?;
+            let (bc, _contratos) =
+                forja::compilar_pipeline_completa(&wrapped).map_err(ForjaAndroidError::from)?;
             session.vm.cargar_bytecode(bc);
-            session
-                .vm
-                .ejecutar()
-                .map_err(|e| ForjaAndroidError::from(e))?;
+            session.vm.ejecutar().map_err(ForjaAndroidError::from)?;
 
             let valor = session
                 .vm
@@ -387,7 +375,7 @@ pub extern "C" fn Java_com_forja_Runtime_nativeEvaluar<'local>(
                 valor_a_java(&mut env, &session.vm, valor)
                     .map_err(|e| ForjaAndroidError::Jni(e.to_string()))
             } else {
-                env.new_string(&output.join("\n"))
+                env.new_string(output.join("\n"))
                     .map(|s| s.into())
                     .map_err(|e| ForjaAndroidError::Jni(e.to_string()))
             }

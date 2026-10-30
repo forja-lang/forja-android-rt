@@ -67,7 +67,7 @@ cargo test -p forja-android-rt --locked
 
 El CI del repo compila el crate dentro del workspace Forja y ejecuta
 `fmt`, `clippy` y `test`. La validación de los `.so` por ABI la hace el
-workflow `rust.yml` del repo padre.
+workflow `cd.yml` del repo padre.
 
 ## Estado
 

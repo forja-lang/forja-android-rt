@@ -116,10 +116,10 @@ impl From<Vec<forja::error::ErrorForja>> for ForjaAndroidError {
         // Tomar el primer error (el más relevante)
         let err = &errors[0];
         ForjaAndroidError::Compile {
-            mensaje: err.mensaje.clone(),
+            mensaje: err.mensaje.to_string(),
             linea: err.linea,
             columna: err.columna,
-            sugerencia: err.sugerencia.clone(),
+            sugerencia: err.sugerencia.to_string(),
         }
     }
 }
